@@ -40,7 +40,7 @@ LOGGER.info("Swagger API response validation is {}".format(
 try:
     stub_class_path = settings.STUBS_CLASS
 except AttributeError:
-    stub_class_path = "{{ module }}.stubs.MockedStubClass"
+    stub_class_path = "{{ module }}.stubs.AbstractStubClass"
 
 module_name, class_name = stub_class_path.rsplit(".", 1)
 Module = importlib.import_module(module_name)

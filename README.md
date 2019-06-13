@@ -1,7 +1,7 @@
-[![Build Status](https://travis-ci.org/praekelt/swagger-django-generator.svg?branch=master)](https://travis-ci.org/praekelt/swagger-django-generator)
+[![Build Status](https://travis-ci.org/spartanAJ/swagger-django-generator.svg?branch=master)](https://travis-ci.org/spartanAJ/swagger-django-generator)
 
 # swagger-(django)-generator
-Convert Swagger specifications into Django or aiohttp server code
+Convert Swagger specifications into Django server code
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -32,7 +32,7 @@ In particular, the following files are currently generated:
 A virtual environment can be set up by running
 ```
 make virtualenv
-./ve/bin/python setup.py develop  # Installs package so that templates can be found
+./ve/bin/python manage.py develop  # Installs package so that templates can be found
 ```
 This utility is self-documenting. To get an idea of what is supported, simply
 run the utility with the `--help` flag:

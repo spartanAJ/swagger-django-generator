@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/spartanAJ/swagger-django-generator.svg?branch=master)](https://travis-ci.org/spartanAJ/swagger-django-generator)
+[![Build Status](https://travis-ci.com/spartanAJ/swagger-django-generator.svg?branch=master)](https://travis-ci.com/spartanAJ/swagger-django-generator)
 
 # swagger-(django)-generator
 Convert Swagger specifications into Django server code

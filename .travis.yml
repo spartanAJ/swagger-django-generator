@@ -1,8 +1,6 @@
 language: python
 matrix:
   include:
-    - python: "2.7"
-      env: REQUIREMENTS=requirements27.txt
     - python: "3.6"
       env: REQUIREMENTS=requirements.txt
 install: "pip install -r ${REQUIREMENTS}"

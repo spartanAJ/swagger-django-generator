@@ -1,6 +1,5 @@
 # swagger-django-generator
-# Never versions invalidates some of the specs used for testing
-swagger-spec-validator==2.1.0
+swagger-spec-validator
 
 apitools
 swagger-parser

@@ -21,7 +21,6 @@ from django.conf import settings
 
 _LOGGER = logging.getLogger(__name__)
 
-
 def body_to_dict(body, schema):
     # type: (str, Dict) -> Dict
     """
@@ -63,7 +62,7 @@ def login_required_no_redirect(view_func):
                         uname, passwd = base_val.split(b":")
                     else:
                         uname, passwd = base_val.split(":")
-                    user = authenticate(username=uname, password=passwd)
+                    user = authenticate(username=uname.decode(), password=passwd.decode())
                     if user and user.is_active:
                         login(request, user)
                         request.user = user

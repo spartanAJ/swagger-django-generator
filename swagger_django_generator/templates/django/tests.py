@@ -8,7 +8,6 @@ import logging
 from django.contrib.auth.models import AnonymousUser, User
 from django.test import RequestFactory, TestCase, tag
 from django.contrib.sessions.middleware import SessionMiddleware
-import moto
 
 
 from . import views
@@ -16,10 +15,6 @@ from . import views
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-logging.getLogger('boto').setLevel(logging.CRITICAL)
-logging.getLogger('boto3').setLevel(logging.CRITICAL)
-logging.getLogger('botocore').setLevel(logging.CRITICAL)
-logging.getLogger('s3transfer').setLevel(logging.CRITICAL)
 logging.getLogger('urllib3').setLevel(logging.CRITICAL)
 
 
@@ -31,12 +26,13 @@ def add_session_to_request(request):
 
 
 class {{ module|title }}Test(TestCase):
-    fixtures = ['core.json']
-
     def setUp(self):
         # Every test needs access to the request factory.
         self.factory = RequestFactory()
-        self.user = User.objects.get(username="ajay")
+        try:
+            self.user = User.objects.get(id=1)
+        except User.DoesNotExist:
+            self.user = AnonymousUser
 {% for class_name, verbs in classes | dictsort(true) %}
     {% for verb, info in verbs | dictsort(true) %}
 

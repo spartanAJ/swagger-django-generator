@@ -12,3 +12,5 @@ rstr
 # in order to do proper validation of certain formats.
 rfc3987
 strict-rfc3339
+
+ruamel.yaml

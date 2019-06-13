@@ -14,6 +14,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 import os
+from ruamel.yaml import YAML
 
 import {{ module }}.schemas as schemas
 import {{ module }}.utils as utils
@@ -25,6 +26,12 @@ LOGGER = logging.getLogger(__name__)
 logging.getLogger('keyring').setLevel(logging.CRITICAL)
 logging.getLogger('requests_oauthlib').setLevel(logging.CRITICAL)
 logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+
+# setting up yaml syntax
+yaml = YAML()
+yaml.explicit_start = True
+yaml.indent(sequence=4, offset=2)
+
 
 
 try:
@@ -196,15 +203,14 @@ class {{ class_name }}(View):
     {% endif %}
   {% endfor %}
 
-
 {% endfor %}
 class __SWAGGER_SPEC__(View):
 
     def get(self, request, *args, **kwargs):
         try:
-          with open(os.path.join("swagger_specification.json"), "r") as f:
-            spec = json.loads(f.read ())
-        except:
-          spec = "No Swagger Spec available"
+            with open(os.path.join("swagger-spec.yml"), "r") as f:
+                spec = yaml.load(f)
+        except EnvironmentError:
+            spec = "No Swagger Spec available"
         return JsonResponse(spec)
 

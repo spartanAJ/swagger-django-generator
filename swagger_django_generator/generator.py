@@ -356,16 +356,23 @@ class Generator(object):
                 # simply flag that it should be secured.
                 # Also, the parser does not contain the security info,
                 # so we have to refer back to the original spec.
-                if "security" in self.parser.specification:
+                # Modded to check for empty security flag: security = []
+                
+                # Path and verb specific indicator
+                specref = self.parser.specification["paths"].get(
+                    relative_url, {}
+                ).get(verb, {})
+                if "security" in specref:
+                    if specref["security"]: 
+                        payload["secure"] = True
+                
+                elif "security" in self.parser.specification:
                     # Global security indicator
-                    payload["secure"] = True
+                    if self.parser.specification["security"]:
+                        payload["secure"] = True
                 else:
-                    # Path and verb specific indicator
-                    specref = self.parser.specification["paths"].get(
-                        relative_url, {}
-                    ).get(verb, {})
-                    payload["secure"] = "security" in specref
-
+                    pass
+                
                 self._classes[class_name][verb] = payload
 
     def generate_urls(self):
@@ -405,6 +412,27 @@ class Generator(object):
                 "module": self.module_name
             })
 
+    def generate_tests(self):
+        # type: (Generator) -> str
+        """
+        Generate a `tests.py` file from the given specification.
+        :return: str
+        """
+        relative_urls = [path.replace(self.parser.base_path + "/", "")
+                         for path in self.parser.paths]
+        entries = {
+            path_to_class_name(relative_url): fixup_parameters(relative_url, self.backend)
+            for relative_url in relative_urls
+        }
+        return render_to_string(
+            self.backend, "tests.py", {
+                "classes": self._classes,
+                "entries": entries,
+                "module": self.module_name,
+                "specification": json.dumps(self.parser.specification, indent=4,
+                                            sort_keys=True).replace("\\", "\\\\")
+            })
+
     def generate_views(self):
         # type: (Generator) -> str
         """
@@ -439,6 +467,15 @@ class Generator(object):
         """
         return render_to_string(self.backend, "utils.py", {})
 
+    def generate_swagger_specification(self):
+        # type: (Generator) -> str
+        """
+        Generate a `swagger_specification.json` file from the given specification.
+        :return: str
+        """
+        return json.dumps(self.parser.specification, indent=4,
+                          sort_keys=True).replace("\\", "\\\\")
+
 @click.command()
 @click.argument("specification_path", type=click.Path(dir_okay=False, exists=True))
 @click.option("--spec-format", type=click.Choice(SPEC_CHOICES))
@@ -461,8 +498,10 @@ class Generator(object):
               help="Use an alternative filename for the utilities.")
 @click.option("--stubs-file", type=str,  default="stubs.py",
               help="Use an alternative filename for the utilities.")
+@click.option("--tests-file", type=str,  default="tests.py",
+              help="Use an alternative filename for the utilities.")
 def main(specification_path, spec_format, backend, verbose, output_dir, module_name,
-         urls_file, views_file, schemas_file, utils_file, stubs_file):
+         urls_file, views_file, schemas_file, utils_file, stubs_file, tests_file):
 
     generator = Generator(backend, module_name=module_name)
     try:
@@ -504,6 +543,21 @@ def main(specification_path, spec_format, backend, verbose, output_dir, module_n
             if verbose:
                 print(data)
 
+        click.secho("Generating tests file...", fg="green")
+        with open(os.path.join(output_dir, tests_file), "w") as f:
+            data = generator.generate_tests()
+            f.write(data)
+            if verbose:
+                print(data)
+        
+        click.secho("Generating cleaned swagger specification file...", fg="green")
+        with open(os.path.join(output_dir.replace(str(module_name),''), "swagger_specification.json"), "w") as f:
+            data = generator.generate_swagger_specification()
+            f.write(data)
+            if verbose:
+                print(data)
+        
+
         click.secho("To perform validation for uri, date-time and color formats, install the "
                     "packages indicated in the link below in YOUR project:")
         click.secho("http://python-jsonschema.readthedocs.io/en/stable/validate/#jsonschema.FormatChecker")
@@ -511,11 +565,6 @@ def main(specification_path, spec_format, backend, verbose, output_dir, module_n
         click.secho("Done.", fg="green")
     except Exception as e:
         click.secho(str(e), fg="red")
-        click.secho("""
-        If you get schema validation errors from a yaml Swagger spec that passes validation on other
-        validators, it may be because of single apostrophe's (') used in some descriptions. The
-        parser used does not like it at all.
-        """)
 
 
 if __name__ == "__main__":

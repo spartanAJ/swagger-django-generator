@@ -8,10 +8,12 @@ import json
 from jsonschema import ValidationError
 
 from django.conf import settings
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
+import os
 
 import {{ module }}.schemas as schemas
 import {{ module }}.utils as utils
@@ -19,6 +21,11 @@ import {{ module }}.utils as utils
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
+
+logging.getLogger('keyring').setLevel(logging.CRITICAL)
+logging.getLogger('requests_oauthlib').setLevel(logging.CRITICAL)
+logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+
 
 try:
     VALIDATE_RESPONSES = settings.SWAGGER_API_VALIDATE_RESPONSES
@@ -107,9 +114,7 @@ class {{ class_name }}(View):
       {% endif %}
             schema = {{ ra|clean_schema }}
             utils.validate({{ ra.name }}, schema)
-
     {% endfor %}
-
     {% for oa in info.optional_args if oa.in == "query" %}
             # {{ oa.name }} (optional): {{ oa.type }} {{ oa.description }}
       {% if oa.type == "array" %}
@@ -149,7 +154,6 @@ class {{ class_name }}(View):
                 return HttpResponseBadRequest("Formdata field '{{ data.name }}' required.")
         {% endif %}
             form_data["{{ data.name }}"] = {{ data.name }}
-
       {% endfor %}
     {% endif %}
             result = Stubs.{{ info.operation }}(request, {% if info.body %}body, {% endif %}{% if info.form_data %}form_data, {% endif %}
@@ -157,27 +161,38 @@ class {{ class_name }}(View):
                 {% for oa in info.optional_args if oa.in == "query" %}{{ oa.name }}, {% endfor %})
 
             if type(result) is tuple:
-                result, headers = result
+                result, headers, status = result
             else:
                 headers = {}
+                status = 200
 
             # The result may contain fields with date or datetime values that will not
             # pass JSON validation. We first create the response, and then maybe validate
             # the response content against the schema.
-            response = JsonResponse(result, safe=False)
+            response = JsonResponse(result, status=status, safe=False)
 
             maybe_validate_result(response.content, self.{{ verb|upper }}_RESPONSE_SCHEMA)
 
             for key, val in headers.items():
                 response[key] = val
-
             return response
+        except PermissionDenied as pd:
+            LOGGER.exception("403")
+            return HttpResponseForbidden("Permission Denied: {}".format(str(pd)))
+        except ObjectDoesNotExist as dne:
+            LOGGER.exception("404")
+            return HttpResponseNotFound("Not Found: {}".format(str(dne)))
         except ValidationError as ve:
+            LOGGER.exception("400")
             return HttpResponseBadRequest("Parameter validation failed: {}".format(ve.message))
         except ValueError as ve:
+            LOGGER.exception("400")
             return HttpResponseBadRequest("Parameter validation failed: {}".format(ve))
-    {% if not loop.last %}
+        except Exception as e:
+            LOGGER.exception("500")
+            return JsonResponse(str(e), status=500, safe=False)
 
+    {% if not loop.last %}
     {% endif %}
   {% endfor %}
 
@@ -186,13 +201,10 @@ class {{ class_name }}(View):
 class __SWAGGER_SPEC__(View):
 
     def get(self, request, *args, **kwargs):
-        spec = json.loads("""{{ specification }}""")
-        # Mod spec to point to demo application
-        spec["basePath"] = "/"
-        spec["host"] = "localhost:8000"
-        # Add basic auth as a security definition
-        security_definitions = spec.get("securityDefinitions", {})
-        security_definitions["basic_auth"] = {"type": "basic"}
-        spec["securityDefinitions"] = security_definitions
+        try:
+          with open(os.path.join("swagger_specification.json"), "r") as f:
+            spec = json.loads(f.read ())
+        except:
+          spec = "No Swagger Spec available"
         return JsonResponse(spec)
 

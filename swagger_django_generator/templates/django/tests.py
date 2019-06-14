@@ -39,11 +39,10 @@ class {{ module|title }}Test(TestCase):
     @tag('{{ verb }}', '{{ info.operation }}')
     {% if verb|lower != 'get' %}
     {% set paths = entries[class_name].split('/') %}
-    @moto.mock_{{ paths[-2]}}
     {% endif %}
     def test_{{ info.operation }}(self):
         # Create an instance of a {{ verb|upper }} request.
-        vars = dict({% for fa in info.form_data %}{{ fa.name }}={% if fa.name=="lab_name" %}"cfscos2"{% elif fa.default %}"{{ fa.default }}" {% else %}None{% endif %}, {% endfor %}{% for ra in info.required_args %}{{ ra.name }}={% if ra.name=="lab_name" %}"cfscos2"{% elif ra.default %}"{{ ra.default }}" {% else %}None{% endif %}, {% endfor %}{% for oa in info.optional_args %}{{ oa.name }}={% if oa.default %}"{{ oa.default }}"{% else %}None{% endif %}, {% endfor %})
+        vars = dict({% for fa in info.form_data %}{{ fa.name }}={% if fa.default %}"{{ fa.default }}"{% else %}None{% endif %}, {% endfor %}{% for ra in info.required_args %}{{ ra.name }}={% if ra.default %}"{{ ra.default }}"{% else %}None{% endif %}, {% endfor %}{% for oa in info.optional_args %}{{ oa.name }}={% if oa.default %}"{{ oa.default }}"{% else %}None{% endif %}, {% endfor %})
         request = self.factory.{{ verb }}('{{ entries[class_name] }}', vars)
         add_session_to_request(request)
         {% if info.secure %}
